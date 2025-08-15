@@ -52,6 +52,33 @@ app.post('/api/paygo', async (req, res) => {
   }
 });
 
+// Endpoint para consultar status de uma venda existente
+app.get('/api/paygo/:id', async (req, res) => {
+  const vendaId = req.params.id;
+  console.log('📦 Consultando status da venda:', vendaId);
+
+  try {
+    // const url = `https://sandbox.controlpay.com.br/webapi/Venda/Consultar/${vendaId}?key=${PAYGO_KEY}`;
+    const url = `https://sandbox.controlpay.com.br/webapi/IntencaoVenda/GetById/?key=${PAYGO_KEY}&intencaoVendaId=${encodeURIComponent(
+      vendaId
+    )}`;
+
+    const { data } = await axios.get(url, {
+      headers: { 'User-Agent': 'DragonTotem/1.0' },
+      timeout: 30000,
+    });
+    console.log(
+      '🔍 Payload ControlPay (GetById):',
+      JSON.stringify(data, null, 2)
+    );
+    res.json(data);
+  } catch (error) {
+    const detail = error.response?.data || error.message;
+    console.error('❌ Erro ao consultar venda:', detail);
+    res.status(500).json({ error: detail });
+  }
+});
+
 const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);

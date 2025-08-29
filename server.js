@@ -8,144 +8,75 @@ import cors from 'cors';
 
 const app = express();
 
-// CORS e JSON
+const token = process.env.API_ID_TOKEN;
+
 app.use(cors({ origin: 'http://localhost:3000' }));
 app.use(express.json());
 
-const PAYGO_KEY = process.env.PAYGO_TOKEN; // <-- coloque sua key no .env
-console.log('🔑 PAYGO_KEY:', PAYGO_KEY ? '✔️ definida' : '❌ ausente');
-// Healthcheck
-app.get('/health', (_req, res) => res.json({ ok: true }));
-
-app.post('/api/paygo', async (req, res) => {
-  console.log('📥 Requisição recebida:', req.body);
+// endpoint que seu React chama para iniciar um pagamento
+app.post('/api/payer/payment', async (req, res) => {
+  console.log('payload :', req.body);
+  console.log('TOKEN', token);
   try {
-    const url = `https://sandbox.controlpay.com.br/webapi/Venda/Vender/?key=${PAYGO_KEY}`;
+    const payload = req.body; // já vem pronto no formato que você mostrou
 
-    // garante formato "1,00" (string)
-    const payload = { ...req.body };
-    if (typeof payload.valorTotalVendido === 'number') {
-      payload.valorTotalVendido = payload.valorTotalVendido
-        .toFixed(2)
-        .replace('.', ',');
+    const url =
+      'https://v4kugeekeb.execute-api.us-east-1.amazonaws.com/prod-stage/cloud-notification/create';
+
+    const { data } = await axios.post(url, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`, // 👈 pega do .env
+      },
+    });
+
+    res.json(data);
+  } catch (error) {
+    if (error.response) {
+      console.error('Erro na resposta da API:', error.response.data);
+      res.status(error.response.status).json(error.response.data);
+    } else if (error.request) {
+      console.error('Nenhuma resposta recebida:', error.request);
+      res.status(500).json({ error: 'Nenhuma resposta recebida da API PayGo' });
+    } else {
+      console.error('Erro na configuração da requisição:', error.message);
+      res.status(500).json({ error: error.message });
     }
-
-    // terminalId como string
-    if (payload.terminalId) payload.terminalId = String(payload.terminalId);
-
-    console.log('➡️ Enviando para ControlPay:', payload);
-
-    const { data } = await axios.post(url, payload, {
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'DragonTotem/1.0',
-      },
-      timeout: 30000,
-    });
-
-    console.log('✅ Resposta ControlPay:', data);
-    res.json(data); // devolve a resposta "crua" do ControlPay
-  } catch (error) {
-    const detail = error.response?.data || error.message;
-    console.error('❌ Erro ControlPay:', detail);
-    res.status(500).json({ error: detail });
   }
 });
 
-// Endpoint para consultar status de uma venda existente
-app.get('/api/paygo/:id', async (req, res) => {
-  const vendaId = req.params.id;
-  console.log('📦 Consultando status da venda:', vendaId);
+// webhook que o Payer chama
+app.post('/api/payer/webhook', (req, res) => {
+  console.log('📩 Webhook recebido:', JSON.stringify(req.body, null, 2));
+  // aqui você salva no banco, dispara socket/evento para o React etc.
+  res.status(200).json({ ok: true });
+});
 
-  try {
-    // const url = `https://sandbox.controlpay.com.br/webapi/Venda/Consultar/${vendaId}?key=${PAYGO_KEY}`;
-    const url = `https://sandbox.controlpay.com.br/webapi/IntencaoVenda/GetById/?key=${PAYGO_KEY}&intencaoVendaId=${encodeURIComponent(
-      vendaId
-    )}`;
-
-    const { data } = await axios.get(url, {
-      headers: { 'User-Agent': 'DragonTotem/1.0' },
-      timeout: 30000,
-    });
+// endpoint de consulta de status
+app.get(
+  '/api/payer/status/:correlationId/:automationName',
+  console.log('Consulta de status requisitada'),
+  async (req, res) => {
+    const { correlationId, automationName } = req.params;
     console.log(
-      '🔍 Payload ControlPay (GetById):',
-      JSON.stringify(data, null, 2)
+      `Consultando status para correlationId: ${correlationId}, automationName: ${automationName}`
     );
-    res.json(data);
-  } catch (error) {
-    const detail = error.response?.data || error.message;
-    console.error('❌ Erro ao consultar venda:', detail);
-    res.status(500).json({ error: detail });
+
+    try {
+      const url = `https://v4kugeekeb.execute-api.us-east-1.amazonaws.com/prod-stage/cloud-notification/order/${correlationId}?automationName=${automationName}`;
+      const { data } = await axios.get(url);
+      res.json(data);
+    } catch (error) {
+      console.error(
+        '❌ Erro ao consultar status:',
+        error.response?.data || error.message
+      );
+      res.status(500).json({ error: error.response?.data || error.message });
+    }
   }
-});
+);
 
-app.post('/api/paygo/listar-vendas', async (req, res) => {
-  try {
-    const { terminalId, dataInicio, dataFim } = req.body;
-
-    const url = `https://sandbox.controlpay.com.br/webapi/IntencaoVenda/GetByFiltros?key=${PAYGO_KEY}`;
-
-    // Corpo da requisição com filtros vindos do frontend
-    const filtros = {
-      terminalId: terminalId || '4517',
-      dataInicio: dataInicio || null, // formato esperado yyyy-MM-ddTHH:mm:ss
-      dataFim: dataFim || null,
-      vendasDia: !dataInicio && !dataFinal, // se não mandar datas, pega do dia
-    };
-
-    const { data } = await axios.post(url, filtros, {
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'DragonTotem/1.0',
-      },
-    });
-
-    res.json(data.intencoesVendas || []);
-  } catch (error) {
-    console.error(
-      '❌ Erro ao listar vendas:',
-      error.response?.data || error.message
-    );
-    res.status(500).json({ error: error.response?.data || error.message });
-  }
-});
-
-app.post('/api/paygo/cancelar-venda', async (req, res) => {
-  try {
-    const {
-      intencaoVendaId,
-      terminalId,
-      aguardarTefIniciarTransacao,
-      senhaTecnica,
-    } = req.body;
-
-    const url = `https://sandbox.controlpay.com.br/webapi/Venda/CancelarVenda/?key=${PAYGO_KEY}`;
-
-    const payload = {
-      intencaoVendaId,
-      terminalId,
-      aguardarTefIniciarTransacao: aguardarTefIniciarTransacao ?? true,
-      senhaTecnica: senhaTecnica || '111111', // senha técnica padrão
-    };
-
-    const { data } = await axios.post(url, payload, {
-      headers: {
-        'Content-Type': 'application/json',
-        'User-Agent': 'DragonTotem/1.0',
-      },
-    });
-
-    res.json(data);
-  } catch (error) {
-    console.error(
-      '❌ Erro ao cancelar venda:',
-      error.response?.data || error.message
-    );
-    res.status(500).json({ error: error.response?.data || error.message });
-  }
-});
-
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
+  console.log(`🚀 Servidor rodando na porta ${PORT}`);
 });

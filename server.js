@@ -79,6 +79,72 @@ app.get('/api/paygo/:id', async (req, res) => {
   }
 });
 
+app.post('/api/paygo/listar-vendas', async (req, res) => {
+  try {
+    const { terminalId, dataInicio, dataFim } = req.body;
+
+    const url = `https://sandbox.controlpay.com.br/webapi/IntencaoVenda/GetByFiltros?key=${PAYGO_KEY}`;
+
+    // Corpo da requisição com filtros vindos do frontend
+    const filtros = {
+      terminalId: terminalId || '4517',
+      dataInicio: dataInicio || null, // formato esperado yyyy-MM-ddTHH:mm:ss
+      dataFim: dataFim || null,
+      vendasDia: !dataInicio && !dataFinal, // se não mandar datas, pega do dia
+    };
+
+    const { data } = await axios.post(url, filtros, {
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'DragonTotem/1.0',
+      },
+    });
+
+    res.json(data.intencoesVendas || []);
+  } catch (error) {
+    console.error(
+      '❌ Erro ao listar vendas:',
+      error.response?.data || error.message
+    );
+    res.status(500).json({ error: error.response?.data || error.message });
+  }
+});
+
+app.post('/api/paygo/cancelar-venda', async (req, res) => {
+  try {
+    const {
+      intencaoVendaId,
+      terminalId,
+      aguardarTefIniciarTransacao,
+      senhaTecnica,
+    } = req.body;
+
+    const url = `https://sandbox.controlpay.com.br/webapi/Venda/CancelarVenda/?key=${PAYGO_KEY}`;
+
+    const payload = {
+      intencaoVendaId,
+      terminalId,
+      aguardarTefIniciarTransacao: aguardarTefIniciarTransacao ?? true,
+      senhaTecnica: senhaTecnica || '111111', // senha técnica padrão
+    };
+
+    const { data } = await axios.post(url, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        'User-Agent': 'DragonTotem/1.0',
+      },
+    });
+
+    res.json(data);
+  } catch (error) {
+    console.error(
+      '❌ Erro ao cancelar venda:',
+      error.response?.data || error.message
+    );
+    res.status(500).json({ error: error.response?.data || error.message });
+  }
+});
+
 const PORT = 3001;
 app.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);

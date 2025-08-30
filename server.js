@@ -15,8 +15,6 @@ app.use(express.json());
 
 // endpoint que seu React chama para iniciar um pagamento
 app.post('/api/payer/payment', async (req, res) => {
-  console.log('payload :', req.body);
-  console.log('TOKEN', token);
   try {
     const payload = req.body; // já vem pronto no formato que você mostrou
 
@@ -55,7 +53,6 @@ app.post('/api/payer/webhook', (req, res) => {
 // endpoint de consulta de status
 app.get(
   '/api/payer/status/:correlationId/:automationName',
-  console.log('Consulta de status requisitada'),
   async (req, res) => {
     const { correlationId, automationName } = req.params;
     console.log(
@@ -64,8 +61,16 @@ app.get(
 
     try {
       const url = `https://v4kugeekeb.execute-api.us-east-1.amazonaws.com/prod-stage/cloud-notification/order/${correlationId}?automationName=${automationName}`;
-      const { data } = await axios.get(url);
-      res.json(data);
+
+      const { data } = await axios.get(url, {
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const json = res.json(data);
+      console.log('✅ Status consultado com sucesso:', json);
     } catch (error) {
       console.error(
         '❌ Erro ao consultar status:',

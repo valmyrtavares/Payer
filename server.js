@@ -10,7 +10,8 @@ const app = express();
 
 const token = process.env.API_ID_TOKEN;
 
-app.use(cors({ origin: 'http://localhost:3000' }));
+//app.use(cors({ origin: 'http://localhost:3000' }));
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 // endpoint que seu React chama para iniciar um pagamento

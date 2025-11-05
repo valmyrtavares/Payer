@@ -110,6 +110,7 @@ app.get(
       );
       res.status(500).json({ error: error.response?.data || error.message });
     }
+    ('');
   }
 );
 // ✅ Inicializa o servidor de forma segura

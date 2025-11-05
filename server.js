@@ -4,11 +4,59 @@ dotenv.config();
 
 import express from 'express';
 import axios from 'axios';
+import fs from 'fs';
 import cors from 'cors';
 
 const app = express();
 
 const token = process.env.API_ID_TOKEN;
+
+// 🔄 Função para atualizar automaticamente o .env com o novo IdToken
+async function updateEnvToken() {
+  try {
+    const loginUrl =
+      'https://bk07exvx19.execute-api.us-east-1.amazonaws.com/dev-stage/oauth/login';
+
+    const body = {
+      clientId: '3veb9e18d50ceqes38o1i8mlph',
+      username: 'pesato4388@ahanim.com',
+      password: 'Acesso@123',
+    };
+
+    const { data } = await axios.post(loginUrl, body, {
+      headers: { 'Content-Type': 'application/json' },
+    });
+
+    const newToken = data?.AuthenticationResult?.IdToken;
+
+    if (!newToken) {
+      console.error('❌ Não foi possível obter o IdToken do login.');
+      return;
+    }
+
+    // Atualiza o .env
+    let envContent = fs.readFileSync('.env', 'utf-8');
+    if (envContent.includes('API_ID_TOKEN=')) {
+      envContent = envContent.replace(
+        /API_ID_TOKEN=.*/g,
+        `API_ID_TOKEN=${newToken}`
+      );
+    } else {
+      envContent += `\nAPI_ID_TOKEN=${newToken}\n`;
+    }
+
+    fs.writeFileSync('.env', envContent);
+    console.log('✅ .env atualizado com novo API_ID_TOKEN.');
+
+    // Atualiza o token em memória também (sem precisar reiniciar)
+    process.env.API_ID_TOKEN = newToken;
+  } catch (error) {
+    console.error(
+      '⚠️ Erro ao atualizar o token automaticamente:',
+      error.message
+    );
+  }
+}
 
 //app.use(cors({ origin: 'http://localhost:3000' }));
 app.use(cors({ origin: '*' }));
@@ -82,7 +130,13 @@ app.get(
   }
 );
 
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => {
-  console.log(`🚀 Servidor rodando na porta ${PORT}`);
-});
+await updateEnvToken();
+
+(async () => {
+  await updateEnvToken(); // ✅ Atualiza o token antes de iniciar o servidor
+
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => {
+    console.log(`🚀 Servidor rodando na porta ${PORT}`);
+  });
+})();

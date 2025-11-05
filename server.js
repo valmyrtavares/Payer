@@ -1,4 +1,5 @@
 // server.js
+console.log('🟡 O servidor começou a rodar o arquivo server.js');
 import dotenv from 'dotenv';
 dotenv.config();
 
@@ -18,6 +19,7 @@ let tokenReady = false; // 👈 bloqueia rotas até token ser atualizado
 
 // 🔄 Atualiza o token em memória (sem gravar no disco)
 async function updateEnvToken() {
+  console.log('🟢 Entrou na função updateEnvToken()');
   try {
     console.log('🔐 Solicitando novo token de autenticação...');
     const loginUrl =

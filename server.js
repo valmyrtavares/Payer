@@ -4,14 +4,14 @@ dotenv.config();
 
 import express from 'express';
 import axios from 'axios';
-import fs from 'fs';
+
 import cors from 'cors';
 
 const app = express();
 
 const token = process.env.API_ID_TOKEN;
 
-// 🔄 Função para atualizar automaticamente o .env com o novo IdToken
+// 🔄 Atualiza o token em memória (sem gravar no disco)
 async function updateEnvToken() {
   try {
     const loginUrl =
@@ -30,31 +30,14 @@ async function updateEnvToken() {
     const newToken = data?.AuthenticationResult?.IdToken;
 
     if (!newToken) {
-      console.error('❌ Não foi possível obter o IdToken do login.');
+      console.error('❌ Não foi possível obter o IdToken.');
       return;
     }
 
-    // Atualiza o .env
-    let envContent = fs.readFileSync('.env', 'utf-8');
-    if (envContent.includes('API_ID_TOKEN=')) {
-      envContent = envContent.replace(
-        /API_ID_TOKEN=.*/g,
-        `API_ID_TOKEN=${newToken}`
-      );
-    } else {
-      envContent += `\nAPI_ID_TOKEN=${newToken}\n`;
-    }
-
-    fs.writeFileSync('.env', envContent);
-    console.log('✅ .env atualizado com novo API_ID_TOKEN.');
-
-    // Atualiza o token em memória também (sem precisar reiniciar)
     process.env.API_ID_TOKEN = newToken;
+    console.log('✅ Token atualizado em memória.');
   } catch (error) {
-    console.error(
-      '⚠️ Erro ao atualizar o token automaticamente:',
-      error.message
-    );
+    console.error('⚠️ Erro ao atualizar token:', error.message);
   }
 }
 
@@ -129,14 +112,14 @@ app.get(
     }
   }
 );
-
-await updateEnvToken();
-
-(async () => {
-  await updateEnvToken(); // ✅ Atualiza o token antes de iniciar o servidor
+// ✅ Inicializa o servidor de forma segura
+const startServer = async () => {
+  await updateEnvToken(); // Atualiza o token antes de subir
 
   const PORT = process.env.PORT || 3001;
   app.listen(PORT, () => {
     console.log(`🚀 Servidor rodando na porta ${PORT}`);
   });
-})();
+};
+
+startServer();

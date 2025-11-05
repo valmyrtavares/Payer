@@ -141,11 +141,11 @@ app.get(
   }
 );
 
-// ✅ Inicializa o servidor
-// const startServer = async () => {
-//   await updateEnvToken(); // Garante que token existe antes de subir servidor
-//   const PORT = process.env.PORT || 3001;
-//   app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
-// };
+const startServer = async () => {
+  console.log('🚀 Iniciando servidor...');
+  await updateEnvToken(); // ✅ Agora realmente roda antes de iniciar
+  const PORT = process.env.PORT || 3001;
+  app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+};
 
-// startServer();
+startServer();

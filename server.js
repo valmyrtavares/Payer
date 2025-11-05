@@ -11,6 +11,9 @@ const app = express();
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
+// ✅ Gera o token imediatamente no startup
+await updateEnvToken();
+
 let tokenReady = false; // 👈 bloqueia rotas até token ser atualizado
 
 // 🔄 Atualiza o token em memória (sem gravar no disco)
@@ -139,10 +142,10 @@ app.get(
 );
 
 // ✅ Inicializa o servidor
-const startServer = async () => {
-  await updateEnvToken(); // Garante que token existe antes de subir servidor
-  const PORT = process.env.PORT || 3001;
-  app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
-};
+// const startServer = async () => {
+//   await updateEnvToken(); // Garante que token existe antes de subir servidor
+//   const PORT = process.env.PORT || 3001;
+//   app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
+// };
 
-startServer();
+// startServer();

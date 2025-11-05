@@ -39,6 +39,9 @@ async function updateEnvToken() {
     }
 
     process.env.API_ID_TOKEN = newToken;
+    console.log('🔑 Novo token recebido:', newToken ? 'SIM ✅' : 'NÃO ❌');
+    console.log('🔑 Tamanho do token:', newToken?.length);
+
     tokenReady = true;
 
     console.log(

@@ -30,14 +30,18 @@ async function updateEnvToken() {
     const newToken = data?.AuthenticationResult?.IdToken;
 
     if (!newToken) {
-      console.error('❌ Não foi possível obter o IdToken.');
+      console.error('❌ Não foi possível obter o IdToken do login.');
       return;
     }
 
+    // ✅ Atualiza apenas em memória (sem gravar no .env)
     process.env.API_ID_TOKEN = newToken;
     console.log('✅ Token atualizado em memória.');
   } catch (error) {
-    console.error('⚠️ Erro ao atualizar token:', error.message);
+    console.error(
+      '⚠️ Erro ao atualizar o token automaticamente:',
+      error.message
+    );
   }
 }
 

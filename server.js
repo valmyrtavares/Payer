@@ -8,9 +8,15 @@ import cors from 'cors';
 
 const app = express();
 
+app.use(cors({ origin: '*' }));
+app.use(express.json());
+
+let tokenReady = false; // 👈 bloqueia rotas até token ser atualizado
+
 // 🔄 Atualiza o token em memória (sem gravar no disco)
 async function updateEnvToken() {
   try {
+    console.log('🔐 Solicitando novo token de autenticação...');
     const loginUrl =
       'https://bk07exvx19.execute-api.us-east-1.amazonaws.com/dev-stage/oauth/login';
 
@@ -28,21 +34,32 @@ async function updateEnvToken() {
 
     if (!newToken) {
       console.error('❌ Não foi possível obter o IdToken do login.');
+      tokenReady = false;
       return;
     }
 
     process.env.API_ID_TOKEN = newToken;
-    console.log('✅ Token atualizado em memória.');
-  } catch (error) {
-    console.error(
-      '⚠️ Erro ao atualizar o token automaticamente:',
-      error.message
+    tokenReady = true;
+
+    console.log(
+      '✅ Token atualizado em memória (início):',
+      newToken.slice(0, 20) + '...' // mostra parte do token
     );
+  } catch (error) {
+    console.error('⚠️ Erro ao atualizar token automaticamente:', error.message);
+    tokenReady = false;
   }
 }
 
-app.use(cors({ origin: '*' }));
-app.use(express.json());
+// 🧱 Middleware: bloqueia requisições até o token estar pronto
+app.use((req, res, next) => {
+  if (!tokenReady) {
+    return res.status(503).json({
+      error: 'Token ainda não carregado. Tente novamente em alguns segundos.',
+    });
+  }
+  next();
+});
 
 // endpoint que seu React chama para iniciar um pagamento
 app.post('/api/payer/payment', async (req, res) => {
@@ -55,22 +72,19 @@ app.post('/api/payer/payment', async (req, res) => {
     const { data } = await axios.post(url, payload, {
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${process.env.API_ID_TOKEN}`, // 👈 token atualizado dinamicamente
+        Authorization: `Bearer ${process.env.API_ID_TOKEN}`,
       },
     });
 
     res.json(data);
   } catch (error) {
-    if (error.response) {
-      console.error('Erro na resposta da API:', error.response.data);
-      res.status(error.response.status).json(error.response.data);
-    } else if (error.request) {
-      console.error('Nenhuma resposta recebida:', error.request);
-      res.status(500).json({ error: 'Nenhuma resposta recebida da API PayGo' });
-    } else {
-      console.error('Erro na configuração da requisição:', error.message);
-      res.status(500).json({ error: error.message });
-    }
+    console.error(
+      '❌ Erro na chamada create:',
+      error.response?.data || error.message
+    );
+    res
+      .status(error.response?.status || 500)
+      .json(error.response?.data || { error: error.message });
   }
 });
 
@@ -95,7 +109,7 @@ app.get(
       const { data } = await axios.get(url, {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${process.env.API_ID_TOKEN}`, // 👈 usa o token mais recente
+          Authorization: `Bearer ${process.env.API_ID_TOKEN}`,
         },
       });
 
@@ -106,14 +120,24 @@ app.get(
         '❌ Erro ao consultar status:',
         error.response?.data || error.message
       );
-      res.status(500).json({ error: error.response?.data || error.message });
+
+      // se o token expirou ou ficou inválido, faz novo login automaticamente
+      if (error.response?.status === 401) {
+        console.log('♻️ Token expirado — tentando renovar...');
+        tokenReady = false;
+        await updateEnvToken();
+      }
+
+      res.status(error.response?.status || 500).json({
+        error: error.response?.data || { message: error.message },
+      });
     }
   }
 );
 
 // ✅ Inicializa o servidor
 const startServer = async () => {
-  await updateEnvToken(); // Atualiza o token antes de subir
+  await updateEnvToken(); // Garante que token existe antes de subir servidor
   const PORT = process.env.PORT || 3001;
   app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
 };

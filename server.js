@@ -4,12 +4,9 @@ dotenv.config();
 
 import express from 'express';
 import axios from 'axios';
-
 import cors from 'cors';
 
 const app = express();
-
-const token = process.env.API_ID_TOKEN;
 
 // 🔄 Atualiza o token em memória (sem gravar no disco)
 async function updateEnvToken() {
@@ -34,7 +31,6 @@ async function updateEnvToken() {
       return;
     }
 
-    // ✅ Atualiza apenas em memória (sem gravar no .env)
     process.env.API_ID_TOKEN = newToken;
     console.log('✅ Token atualizado em memória.');
   } catch (error) {
@@ -45,14 +41,13 @@ async function updateEnvToken() {
   }
 }
 
-//app.use(cors({ origin: 'http://localhost:3000' }));
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 // endpoint que seu React chama para iniciar um pagamento
 app.post('/api/payer/payment', async (req, res) => {
   try {
-    const payload = req.body; // já vem pronto no formato que você mostrou
+    const payload = req.body;
 
     const url =
       'https://v4kugeekeb.execute-api.us-east-1.amazonaws.com/prod-stage/cloud-notification/create';
@@ -60,7 +55,7 @@ app.post('/api/payer/payment', async (req, res) => {
     const { data } = await axios.post(url, payload, {
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`, // 👈 pega do .env
+        Authorization: `Bearer ${process.env.API_ID_TOKEN}`, // 👈 token atualizado dinamicamente
       },
     });
 
@@ -82,7 +77,6 @@ app.post('/api/payer/payment', async (req, res) => {
 // webhook que o Payer chama
 app.post('/api/payer/webhook', (req, res) => {
   console.log('📩 Webhook recebido:', JSON.stringify(req.body, null, 2));
-  // aqui você salva no banco, dispara socket/evento para o React etc.
   res.status(200).json({ ok: true });
 });
 
@@ -101,12 +95,12 @@ app.get(
       const { data } = await axios.get(url, {
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${process.env.API_ID_TOKEN}`, // 👈 usa o token mais recente
         },
       });
 
-      const json = res.json(data);
-      console.log('✅ Status consultado com sucesso:', json);
+      console.log('✅ Status consultado com sucesso:', data);
+      res.json(data);
     } catch (error) {
       console.error(
         '❌ Erro ao consultar status:',
@@ -114,17 +108,14 @@ app.get(
       );
       res.status(500).json({ error: error.response?.data || error.message });
     }
-    ('');
   }
 );
-// ✅ Inicializa o servidor de forma segura
+
+// ✅ Inicializa o servidor
 const startServer = async () => {
   await updateEnvToken(); // Atualiza o token antes de subir
-
   const PORT = process.env.PORT || 3001;
-  app.listen(PORT, () => {
-    console.log(`🚀 Servidor rodando na porta ${PORT}`);
-  });
+  app.listen(PORT, () => console.log(`🚀 Servidor rodando na porta ${PORT}`));
 };
 
 startServer();

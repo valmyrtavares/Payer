@@ -1,4 +1,5 @@
 // server.js
+let tokenReady = false; // 👈 bloqueia rotas até token ser atualizado
 console.log('🟡 O servidor começou a rodar o arquivo server.js');
 import dotenv from 'dotenv';
 dotenv.config();
@@ -13,9 +14,8 @@ app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 // ✅ Gera o token imediatamente no startup
-await updateEnvToken();
 
-let tokenReady = false; // 👈 bloqueia rotas até token ser atualizado
+await updateEnvToken();
 
 // 🔄 Atualiza o token em memória (sem gravar no disco)
 async function updateEnvToken() {

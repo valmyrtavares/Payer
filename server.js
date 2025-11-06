@@ -17,12 +17,6 @@ app.use(express.json());
 
 await updateEnvToken();
 
-// 🔄 Atualiza token automaticamente a cada 55 minutos
-setInterval(() => {
-  console.log('🕒 Renovando token a cada 55 minutos...');
-  updateEnvToken();
-}, 55 * 60 * 1000);
-
 // 🔄 Atualiza o token em memória (sem gravar no disco)
 async function updateEnvToken() {
   console.log('🟢 Entrou na função updateEnvToken()');
@@ -157,3 +151,19 @@ const startServer = async () => {
 };
 
 startServer();
+
+// 🔁 1️⃣ Renova token a cada 55 minutos
+setInterval(() => {
+  console.log('🕒 Renovando token a cada 55 minutos...');
+  updateEnvToken();
+}, 55 * 60 * 1000);
+
+// 💓 2️⃣ Mantém o Render acordado a cada 5 minutos
+setInterval(async () => {
+  try {
+    await fetch('https://payer-4ptm.onrender.com');
+    console.log('💤 Mantendo servidor ativo com ping...');
+  } catch (err) {
+    console.error('⚠️ Falha ao fazer ping:', err.message);
+  }
+}, 5 * 60 * 1000);

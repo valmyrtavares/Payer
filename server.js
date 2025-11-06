@@ -17,6 +17,12 @@ app.use(express.json());
 
 await updateEnvToken();
 
+// 🔄 Atualiza token automaticamente a cada 55 minutos
+setInterval(() => {
+  console.log('🕒 Renovando token a cada 55 minutos...');
+  updateEnvToken();
+}, 55 * 60 * 1000);
+
 // 🔄 Atualiza o token em memória (sem gravar no disco)
 async function updateEnvToken() {
   console.log('🟢 Entrou na função updateEnvToken()');
@@ -27,8 +33,8 @@ async function updateEnvToken() {
 
     const body = {
       clientId: '3veb9e18d50ceqes38o1i8mlph',
-      username: 'pesato4388@ahanim.com',
-      password: 'Acesso@123',
+      username: process.env.LOGIN_USERNAME,
+      password: process.env.LOGIN_PASSWORD,
     };
 
     const { data } = await axios.post(loginUrl, body, {

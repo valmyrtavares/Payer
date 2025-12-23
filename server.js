@@ -86,6 +86,67 @@ app.post('/api/payer/payment', async (req, res) => {
   }
 });
 
+// ❌ Aborta uma operação em andamento
+app.post('/api/payer/abort', async (req, res) => {
+  try {
+    const {
+      correlationId,
+      automationName,
+      receiver,
+      origin = 'LAB',
+    } = req.body;
+
+    if (!correlationId || !automationName || !receiver) {
+      return res.status(400).json({
+        error:
+          'correlationId, automationName e receiver são obrigatórios para abortar.',
+      });
+    }
+
+    const payload = {
+      type: 'INPUT',
+      origin,
+      data: {
+        callbackUrl: 'https://payer-4ptm.onrender.com/api/payer/webhook',
+        correlationId,
+        automationName,
+        receiver,
+        message: {
+          command: 'ABORT',
+        },
+      },
+    };
+
+    const url =
+      'https://v4kugeekeb.execute-api.us-east-1.amazonaws.com/prod-stage/cloud-notification/create';
+
+    const { data } = await axios.post(url, payload, {
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${process.env.API_ID_TOKEN}`,
+      },
+    });
+
+    console.log('🛑 Abort enviado ao Payer:', payload);
+
+    // ⚠️ Isso NÃO é o status final, apenas o ACK da requisição
+    res.json({
+      ok: true,
+      message: 'Comando ABORT enviado com sucesso',
+      payerResponse: data,
+    });
+  } catch (error) {
+    console.error(
+      '❌ Erro ao abortar operação:',
+      error.response?.data || error
+    );
+
+    res
+      .status(error.response?.status || 500)
+      .json(error.response?.data || { error: error.message });
+  }
+});
+
 // 🚀 Inicia servidor
 const startServer = async () => {
   console.log('🚀 Iniciando servidor...');

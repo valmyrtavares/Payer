@@ -70,7 +70,7 @@ app.post('/api/payer/payment', async (req, res) => {
   try {
     const payload = req.body;
     const url =
-      'https://v4kugeekeb.execute-api.us-east-1.amazonaws.com/prod-stage/cloud-notification/create';
+      'https://ms7bi3gsxk.execute-api.us-east-1.amazonaws.com/prod-stage/cloud-notification/create';
     const { data } = await axios.post(url, payload, {
       headers: {
         'Content-Type': 'application/json',
@@ -118,7 +118,7 @@ app.post('/api/payer/abort', async (req, res) => {
     };
 
     const url =
-      'https://v4kugeekeb.execute-api.us-east-1.amazonaws.com/prod-stage/cloud-notification/create';
+      'https://ms7bi3gsxk.execute-api.us-east-1.amazonaws.com/prod-stage/cloud-notification/create';
 
     const { data } = await axios.post(url, payload, {
       headers: {
@@ -138,7 +138,7 @@ app.post('/api/payer/abort', async (req, res) => {
   } catch (error) {
     console.error(
       '❌ Erro ao abortar operação:',
-      error.response?.data || error
+      error.response?.data || error,
     );
 
     res
@@ -153,24 +153,30 @@ const startServer = async () => {
   await updateEnvToken();
   const PORT = process.env.PORT || 3001;
   server.listen(PORT, () =>
-    console.log(`🚀 Servidor rodando na porta ${PORT}`)
+    console.log(`🚀 Servidor rodando na porta ${PORT}`),
   );
 };
 
 startServer();
 
 // 🔁 1️⃣ Renova token a cada 55 minutos
-setInterval(() => {
-  console.log('🕒 Renovando token a cada 55 minutos...');
-  updateEnvToken();
-}, 55 * 60 * 1000);
+setInterval(
+  () => {
+    console.log('🕒 Renovando token a cada 55 minutos...');
+    updateEnvToken();
+  },
+  55 * 60 * 1000,
+);
 
 // 💓 2️⃣ Mantém o Render acordado a cada 5 minutos
-setInterval(async () => {
-  try {
-    await fetch('https://payer-4ptm.onrender.com');
-    console.log('💤 Mantendo servidor ativo com ping...');
-  } catch (err) {
-    console.error('⚠️ Falha ao fazer ping:', err.message);
-  }
-}, 5 * 60 * 1000);
+setInterval(
+  async () => {
+    try {
+      await fetch('https://payer-4ptm.onrender.com');
+      console.log('💤 Mantendo servidor ativo com ping...');
+    } catch (err) {
+      console.error('⚠️ Falha ao fazer ping:', err.message);
+    }
+  },
+  5 * 60 * 1000,
+);

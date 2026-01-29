@@ -69,11 +69,11 @@ app.post('/api/payer/webhook', (req, res) => {
 
 // 🧩 Demais rotas (payment e status) continuam iguais
 app.post('/api/payer/payment', async (req, res) => {
-  console.log('🌐 CREATE URL EM USO:', url);
   try {
     const payload = req.body;
     const url =
       'https://ms7bi3gsxk.execute-api.us-east-1.amazonaws.com/prod-stage/cloud-notification/create';
+    console.log('🌐 CREATE URL EM USO:', url);
     const { data } = await axios.post(url, payload, {
       headers: {
         'Content-Type': 'application/json',

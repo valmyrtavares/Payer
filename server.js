@@ -7,6 +7,8 @@ import cors from 'cors';
 import http from 'http';
 import { Server } from 'socket.io';
 
+console.log('🚨 DEPLOY CHECK — VERSION 2026-01-29 / URL NOVA');
+
 let tokenReady = false;
 console.log('🟡 O servidor começou a rodar o arquivo server.js');
 
@@ -67,6 +69,7 @@ app.post('/api/payer/webhook', (req, res) => {
 
 // 🧩 Demais rotas (payment e status) continuam iguais
 app.post('/api/payer/payment', async (req, res) => {
+  console.log('🌐 CREATE URL EM USO:', url);
   try {
     const payload = req.body;
     const url =
